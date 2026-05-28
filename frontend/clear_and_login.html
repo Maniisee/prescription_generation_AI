@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear & Fresh Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4">🔐 Fresh Login</h2>
+                        
+                        <div id="step1" class="mb-4">
+                            <h5>Step 1: Clear Old Data</h5>
+                            <button onclick="clearData()" class="btn btn-danger">Clear Browser Data</button>
+                            <div id="clearResult" class="mt-2"></div>
+                        </div>
+
+                        <div id="step2" class="mb-4">
+                            <h5>Step 2: Login</h5>
+                            <form id="loginForm">
+                                <div class="mb-3">
+                                    <input type="email" class="form-control" id="email" value="test@example.com" required>
+                                </div>
+                                <div class="mb-3">
+                                    <input type="password" class="form-control" id="password" value="test1234" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Login</button>
+                            </form>
+                            <div id="loginResult" class="mt-2"></div>
+                        </div>
+
+                        <div id="step3" class="mb-4">
+                            <h5>Step 3: Go to Patient Page</h5>
+                            <a href="patient.html" class="btn btn-success w-100">Open Patient Page</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5001';
+
+        function clearData() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.getElementById('clearResult').innerHTML = '<div class="alert alert-success">✓ All data cleared!</div>';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Logging in...';
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                console.log('Login response:', data);
+
+                if (response.ok && data.access_token) {
+                    // Store with extra logging
+                    console.log('Storing token:', data.access_token);
+                    console.log('Token length:', data.access_token.length);
+                    
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+
+                    // Verify it was stored
+                    const storedToken = localStorage.getItem('token');
+                    console.log('Verified stored token:', storedToken ? 'YES' : 'NO');
+                    console.log('Stored token length:', storedToken ? storedToken.length : 0);
+
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✓ Login successful!<br>
+                            Token: ${data.access_token.substring(0, 30)}...<br>
+                            Stored: ${storedToken ? 'YES' : 'NO'}<br>
+                            Length: ${storedToken ? storedToken.length : 0}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">✗ ${data.message || 'Login failed'}</div>`;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">✗ Error: ${error.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html>

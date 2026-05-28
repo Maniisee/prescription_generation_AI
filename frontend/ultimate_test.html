@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ULTIMATE DEBUG</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; background: #1a1a1a; color: #fff; }
+        .box { background: #2a2a2a; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        button { padding: 15px 30px; font-size: 18px; background: #0a84ff; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0066cc; }
+        pre { background: #1a1a1a; padding: 15px; border-radius: 4px; overflow-x: auto; border: 1px solid #444; }
+        .success { border-left: 4px solid #30d158; }
+        .error { border-left: 4px solid #ff453a; }
+        .info { border-left: 4px solid #0a84ff; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 IPv6 vs IPv4 Test</h1>
+    
+    <div class="box info">
+        <h3>Current Environment:</h3>
+        <pre id="env"></pre>
+    </div>
+
+    <div class="box">
+        <button onclick="testAll()">RUN COMPLETE TEST</button>
+        <button onclick="clearAndTest()">CLEAR CACHE & TEST</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('env').textContent = 
+            'URL: ' + window.location.href + '\n' +
+            'Protocol: ' + window.location.protocol + '\n' +
+            'Host: ' + window.location.host + '\n' +
+            'Browser: ' + navigator.userAgent + '\n' +
+            'Time: ' + new Date().toISOString();
+
+        async function testAll() {
+            const output = document.getElementById('output');
+            let html = '';
+
+            // Test 1: localhost
+            html += '<div class="box"><h3>Test 1: Using localhost (may use IPv6)</h3>';
+            try {
+                console.log('Testing http://localhost:5001/api/auth/login');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('http://localhost:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'test@example.com', password: 'test1234' }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                console.log('Response:', data);
+                
+                html += '<div class="success">';
+                html += '✅ SUCCESS with localhost<br>';
+                html += 'Status: ' + response.status + '<br>';
+                html += 'Has Token: ' + (data.access_token ? 'YES' : 'NO') + '<br>';
+                if (data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    html += '<strong>✓ Token stored! You can login now.</strong><br>';
+                }
+                html += '</div>';
+            } catch (error) {
+                console.error('Error with localhost:', error);
+                html += '<div class="error">';
+                html += '❌ FAILED with localhost<br>';
+                html += 'Error Name: ' + error.name + '<br>';
+                html += 'Error Message: ' + error.message + '<br>';
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    html += '<strong>This is likely an IPv6 issue!</strong><br>';
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+            output.innerHTML = html;
+
+            // Test 2: 127.0.0.1
+            html += '<div class="box"><h3>Test 2: Using 127.0.0.1 (forces IPv4)</h3>';
+            try {
+                console.log('Testing http://127.0.0.1:5001/api/auth/login');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('http://127.0.0.1:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'test@example.com', password: 'test1234' }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                
+                html += '<div class="success">';
+                html += '✅ SUCCESS with 127.0.0.1 (IPv4)<br>';
+                html += 'Status: ' + response.status + '<br>';
+                html += 'Has Token: ' + (data.access_token ? 'YES' : 'NO') + '<br>';
+                if (data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    html += '<strong>✓ Token stored! IPv4 works!</strong><br>';
+                    html += '<p><strong>SOLUTION: Change API_URL to http://127.0.0.1:5001 in config.js</strong></p>';
+                }
+                html += '</div>';
+            } catch (error) {
+                console.error('Error with 127.0.0.1:', error);
+                html += '<div class="error">';
+                html += '❌ FAILED with 127.0.0.1<br>';
+                html += 'Error: ' + error.message + '<br>';
+                html += '</div>';
+            }
+            html += '</div>';
+            output.innerHTML = html;
+        }
+
+        async function clearAndTest() {
+            localStorage.clear();
+            sessionStorage.clear();
+            console.clear();
+            alert('Cache cleared! Running test...');
+            await testAll();
+        }
+    </script>
+</body>
+</html>

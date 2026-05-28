@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Direct Login Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; background: #1a1a1a; color: #fff; }
+        .box { background: #2a2a2a; padding: 30px; margin: 20px 0; border-radius: 12px; max-width: 600px; }
+        button { padding: 20px 40px; font-size: 20px; background: #0a84ff; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 10px; }
+        button:hover { background: #0066cc; }
+        pre { background: #1a1a1a; padding: 20px; border-radius: 8px; overflow-x: auto; border: 1px solid #444; white-space: pre-wrap; word-wrap: break-word; }
+        .success { border-left: 5px solid #30d158; }
+        .error { border-left: 5px solid #ff453a; }
+        .info { border-left: 5px solid #0a84ff; }
+        input { padding: 15px; font-size: 16px; width: 100%; margin: 10px 0; border: 1px solid #444; background: #1a1a1a; color: #fff; border-radius: 8px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <h1>🔬 Direct Login Test (No Cache)</h1>
+    <p>This page has cache disabled. API URL is hardcoded to test IPv4 fix.</p>
+    
+    <div class="box info">
+        <h3>Test Account:</h3>
+        <p>Email: <strong>test@example.com</strong></p>
+        <p>Password: <strong>test1234</strong></p>
+    </div>
+
+    <div class="box">
+        <input type="email" id="email" value="test@example.com" placeholder="Email">
+        <input type="password" id="password" value="test1234" placeholder="Password">
+        <button onclick="testLogin()">🚀 TEST LOGIN WITH IPv4</button>
+        <button onclick="testLocalhost()">🔍 TEST WITH localhost</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        const API_URL_IPv4 = 'http://127.0.0.1:5001';
+        const API_URL_localhost = 'http://localhost:5001';
+
+        async function testLogin() {
+            await performTest(API_URL_IPv4, 'IPv4 (127.0.0.1)');
+        }
+
+        async function testLocalhost() {
+            await performTest(API_URL_localhost, 'localhost');
+        }
+
+        async function performTest(apiUrl, label) {
+            const output = document.getElementById('output');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            let html = '<div class="box"><h3>Testing with ' + label + '</h3>';
+            
+            console.log('=== Testing:', label, '===');
+            console.log('API URL:', apiUrl);
+            console.log('Email:', email);
+            
+            try {
+                const startTime = Date.now();
+                console.log('Sending POST request...');
+                
+                const response = await fetch(apiUrl + '/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password }),
+                    cache: 'no-cache'
+                });
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                console.log('Response status:', response.status);
+                console.log('Response time:', duration + 'ms');
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok && data.access_token) {
+                    html += '<div class="success">';
+                    html += '<h2>✅ SUCCESS!</h2>';
+                    html += '<p><strong>Response time:</strong> ' + duration + 'ms</p>';
+                    html += '<p><strong>Status:</strong> ' + response.status + '</p>';
+                    html += '<p><strong>Token:</strong> ' + data.access_token.substring(0, 50) + '...</p>';
+                    html += '<p><strong>User:</strong> ' + JSON.stringify(data.user) + '</p>';
+                    
+                    // Store token
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    html += '<br><p style="font-size: 18px;">✓ Token stored in localStorage!</p>';
+                    html += '<button onclick="location.href=\'patient.html\'">Go to Patient Page</button>';
+                    html += '</div>';
+                } else {
+                    html += '<div class="error">';
+                    html += '<h2>❌ Login Failed</h2>';
+                    html += '<p>Status: ' + response.status + '</p>';
+                    html += '<p>Message: ' + (data.message || 'Unknown error') + '</p>';
+                    html += '</div>';
+                }
+            } catch (error) {
+                const errorDetails = {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                };
+                
+                console.error('=== ERROR ===');
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                console.error('Full error:', error);
+                
+                html += '<div class="error">';
+                html += '<h2>❌ Network Error</h2>';
+                html += '<p><strong>Error Type:</strong> ' + error.name + '</p>';
+                html += '<p><strong>Error Message:</strong> ' + error.message + '</p>';
+                html += '<pre>' + JSON.stringify(errorDetails, null, 2) + '</pre>';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    html += '<p><strong>Diagnosis:</strong> This is typically caused by:</p>';
+                    html += '<ul>';
+                    html += '<li>CORS issues</li>';
+                    html += '<li>Backend not running</li>';
+                    html += '<li>Network connectivity problems</li>';
+                    html += '<li>IPv6/IPv4 routing issues</li>';
+                    html += '</ul>';
+                }
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            output.innerHTML = html;
+        }
+
+        // Show current config on load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded at:', new Date().toISOString());
+            console.log('Current location:', window.location.href);
+            console.log('IPv4 API URL:', API_URL_IPv4);
+            console.log('localhost API URL:', API_URL_localhost);
+        });
+    </script>
+</body>
+</html>

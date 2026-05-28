@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FINAL TEST</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .box { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        button { padding: 12px 24px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Network Diagnostic Tool</h1>
+    
+    <div class="box">
+        <h3>Current Page Info:</h3>
+        <pre id="pageInfo"></pre>
+    </div>
+
+    <div class="box">
+        <button onclick="testEverything()">RUN FULL TEST</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        // Display page info
+        document.getElementById('pageInfo').textContent = 
+            'URL: ' + window.location.href + '\n' +
+            'Protocol: ' + window.location.protocol + '\n' +
+            'Host: ' + window.location.host + '\n' +
+            'Browser: ' + navigator.userAgent.split(' ').slice(-2).join(' ');
+
+        async function testEverything() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<div class="box"><h3>Testing...</h3></div>';
+            
+            let results = '';
+
+            // Test 1: Backend Root
+            results += '<div class="box"><h3>Test 1: Backend Root (http://localhost:5001/)</h3>';
+            try {
+                const start = Date.now();
+                const response = await fetch('http://localhost:5001/');
+                const time = Date.now() - start;
+                const text = await response.text();
+                
+                results += '<div class="success">';
+                results += '✅ SUCCESS<br>';
+                results += 'Status: ' + response.status + '<br>';
+                results += 'Time: ' + time + 'ms<br>';
+                results += 'Response: <pre>' + text.substring(0, 200) + '</pre>';
+                results += '</div>';
+            } catch (error) {
+                results += '<div class="error">';
+                results += '❌ FAILED<br>';
+                results += 'Error Name: ' + error.name + '<br>';
+                results += 'Error Message: ' + error.message + '<br>';
+                results += 'Error String: ' + error.toString() + '<br>';
+                results += '</div>';
+            }
+            results += '</div>';
+            output.innerHTML = results;
+
+            // Test 2: Login
+            results += '<div class="box"><h3>Test 2: Login API</h3>';
+            try {
+                const start = Date.now();
+                const response = await fetch('http://localhost:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        password: 'test1234'
+                    })
+                });
+                const time = Date.now() - start;
+                const data = await response.json();
+                
+                results += '<div class="success">';
+                results += '✅ SUCCESS<br>';
+                results += 'Status: ' + response.status + '<br>';
+                results += 'Time: ' + time + 'ms<br>';
+                results += 'Has Token: ' + (data.access_token ? 'YES' : 'NO') + '<br>';
+                results += 'User: ' + (data.user ? data.user.name : 'N/A') + '<br>';
+                
+                if (data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    results += '<strong>✓ Token stored in localStorage</strong><br>';
+                }
+                results += '</div>';
+            } catch (error) {
+                results += '<div class="error">';
+                results += '❌ FAILED<br>';
+                results += 'Error: ' + error.message + '<br>';
+                results += '</div>';
+            }
+            results += '</div>';
+            output.innerHTML = results;
+
+            // Final Summary
+            results += '<div class="box success">';
+            results += '<h3>🎉 Tests Complete!</h3>';
+            results += '<p>If both tests passed, you can now:</p>';
+            results += '<p>';
+            results += '<a href="login.html"><button>Go to Login Page</button></a> ';
+            results += '<a href="patient.html"><button>Go to Patient Page</button></a>';
+            results += '</p>';
+            results += '<p><strong>Credentials:</strong><br>Email: test@example.com<br>Password: test1234</p>';
+            results += '</div>';
+            
+            output.innerHTML = results;
+        }
+    </script>
+</body>
+</html>

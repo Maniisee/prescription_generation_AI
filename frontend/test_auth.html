@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test</title>
+</head>
+<body>
+    <h1>Testing Authentication</h1>
+    <button onclick="testLogin()">1. Test Login</button>
+    <button onclick="testToken()">2. Test Token</button>
+    <button onclick="testPatient()">3. Test Patient API</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+
+    <script>
+        const API_URL = 'http://localhost:5001';
+        let currentToken = null;
+
+        async function testLogin() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing login...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        password: 'test1234'
+                    })
+                });
+                
+                const data = await response.json();
+                currentToken = data.access_token;
+                
+                result.innerHTML = `
+                    <h3>Login Response (${response.status}):</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p><strong>Token:</strong> ${currentToken ? currentToken.substring(0, 50) + '...' : 'NO TOKEN'}</p>
+                    <p><strong>Token Length:</strong> ${currentToken ? currentToken.length : 0}</p>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testToken() {
+            const result = document.getElementById('result');
+            if (!currentToken) {
+                result.innerHTML = '<p style="color: red;">Please login first!</p>';
+                return;
+            }
+            
+            result.innerHTML = 'Verifying token...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/verify`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <h3>Token Verification (${response.status}):</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testPatient() {
+            const result = document.getElementById('result');
+            if (!currentToken) {
+                result.innerHTML = '<p style="color: red;">Please login first!</p>';
+                return;
+            }
+            
+            result.innerHTML = 'Testing patient API...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/patient/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({
+                        age: 30,
+                        gender: 'male',
+                        blood_pressure_systolic: 120,
+                        blood_pressure_diastolic: 80,
+                        temperature: 98.6,
+                        pulse: 72,
+                        weight: 70,
+                        symptoms: 'Fever, Cough',
+                        medical_history: 'None'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <h3>Patient API (${response.status}):</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnosis & Prescription - AI Health Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .main-content {
+            min-height: 100vh;
+            padding-top: 80px;
+            padding-bottom: 50px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .confidence-high { color: #28a745; }
+        .confidence-medium { color: #ffc107; }
+        .confidence-low { color: #dc3545; }
+        .symptom-item {
+            display: inline-block;
+            padding: 5px 15px;
+            margin: 5px;
+            background: #e9ecef;
+            border-radius: 20px;
+        }
+        .symptom-matched {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        @media print {
+            .no-print { display: none; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top no-print">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">🏥 AI Health Assistant</a>
+            <div class="ms-auto">
+                <button class="btn btn-sm btn-outline-light" onclick="window.print()">Print</button>
+                <button class="btn btn-sm btn-outline-light ms-2" onclick="newConsultation()">New Consultation</button>
+                <button class="btn btn-sm btn-outline-light ms-2" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <!-- Loading State -->
+                    <div id="loading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">Analyzing your symptoms...</p>
+                    </div>
+
+                    <!-- Diagnosis Result -->
+                    <div id="resultContainer" class="d-none">
+                        <!-- Diagnosis Card -->
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="card-title mb-4">🔬 Diagnosis</h3>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h4 id="diseaseName" class="text-primary"></h4>
+                                        <p id="diseaseDescription" class="text-muted"></p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div>
+                                            <small class="text-muted">Confidence</small>
+                                            <h2 id="confidence" class="mb-0"></h2>
+                                        </div>
+                                        <div class="mt-3">
+                                            <span id="severityBadge" class="badge"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Matched Symptoms -->
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">✓ Matched Symptoms</h5>
+                                <div id="matchedSymptoms"></div>
+                            </div>
+                        </div>
+
+                        <!-- Alternative Diagnoses -->
+                        <div id="alternativesCard" class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">🔍 Alternative Possibilities</h5>
+                                <div id="alternatives"></div>
+                            </div>
+                        </div>
+
+                        <!-- Prescription -->
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="card-title mb-4">💊 Prescription</h3>
+                                
+                                <!-- Medications Table -->
+                                <h5 class="mb-3">Medications</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Medication</th>
+                                                <th>Dosage</th>
+                                                <th>Frequency</th>
+                                                <th>Duration</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="medicationsTable"></tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Instructions -->
+                                <div class="mt-4">
+                                    <h5 class="mb-3">📋 Instructions</h5>
+                                    <div id="instructions" class="alert alert-info"></div>
+                                </div>
+
+                                <!-- Precautions -->
+                                <div class="mt-4">
+                                    <h5 class="mb-3">⚠️ Precautions</h5>
+                                    <div id="precautions" class="alert alert-warning"></div>
+                                </div>
+
+                                <!-- Recommendations -->
+                                <div id="recommendationsCard" class="mt-4">
+                                    <h5 class="mb-3">💡 Additional Recommendations</h5>
+                                    <div id="recommendations" class="alert alert-light"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disclaimer -->
+                        <div class="alert alert-danger">
+                            <h6>⚕️ Important Medical Disclaimer</h6>
+                            <p class="mb-0">
+                                This is an AI-generated preliminary assessment and should NOT replace professional medical advice. 
+                                Please consult with a qualified healthcare provider for proper diagnosis and treatment. 
+                                In case of emergency, call emergency services immediately.
+                            </p>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="text-center no-print mt-4">
+                            <button class="btn btn-primary btn-lg mx-2" onclick="window.print()">
+                                🖨️ Print Prescription
+                            </button>
+                            <button class="btn btn-outline-primary btn-lg mx-2" onclick="newConsultation()">
+                                ➕ New Consultation
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="errorContainer" class="d-none">
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <h3 class="text-danger">❌ Error</h3>
+                                <p id="errorMessage"></p>
+                                <button class="btn btn-primary mt-3" onclick="newConsultation()">Start New Consultation</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let diagnosisData = null;
+        let prescriptionData = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth();
+            await loadDiagnosisAndPrescription();
+        });
+
+        async function loadDiagnosisAndPrescription() {
+            try {
+                // Get diagnosis from localStorage
+                const storedDiagnosis = localStorage.getItem('currentDiagnosis');
+                
+                if (!storedDiagnosis) {
+                    showError('No diagnosis data found. Please complete the patient form first.');
+                    return;
+                }
+
+                const rawData = JSON.parse(storedDiagnosis);
+                
+                // Flatten the data structure - the API returns {status, diagnosis_id, prediction}
+                // We need to merge prediction data with diagnosis_id
+                if (rawData.prediction) {
+                    diagnosisData = {
+                        diagnosis_id: rawData.diagnosis_id,
+                        ...rawData.prediction
+                    };
+                } else {
+                    // If already flattened (backwards compatibility)
+                    diagnosisData = rawData;
+                }
+                
+                // Get prescription
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/prescription/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        diagnosis_id: diagnosisData.diagnosis_id
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    prescriptionData = result;
+                    displayResults();
+                } else {
+                    const error = await response.json();
+                    showError(error.message || 'Failed to generate prescription');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Network error. Please check if the server is running.');
+            }
+        }
+
+        function displayResults() {
+            console.log('Displaying results...');
+            console.log('diagnosisData:', diagnosisData);
+            console.log('prescriptionData:', prescriptionData);
+            
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('resultContainer').classList.remove('d-none');
+
+            // Display diagnosis
+            document.getElementById('diseaseName').textContent = diagnosisData.disease || 'Unknown';
+            document.getElementById('diseaseDescription').textContent = 
+                `Based on the symptoms and vitals provided, our AI has identified this condition.`;
+
+            // Confidence - handle both string and number formats
+            let confidence = diagnosisData.confidence;
+            console.log('Raw confidence value:', confidence, 'Type:', typeof confidence);
+            
+            if (typeof confidence === 'string') {
+                // Remove % sign if present and convert to number
+                confidence = parseFloat(confidence.replace('%', ''));
+            } else if (confidence === undefined || confidence === null) {
+                console.warn('Confidence is undefined or null, defaulting to 0');
+                confidence = 0;
+            }
+            
+            console.log('Processed confidence:', confidence);
+            
+            const confidenceEl = document.getElementById('confidence');
+            confidenceEl.textContent = `${confidence.toFixed(1)}%`;
+            
+            if (confidence >= 75) {
+                confidenceEl.className = 'mb-0 confidence-high';
+            } else if (confidence >= 50) {
+                confidenceEl.className = 'mb-0 confidence-medium';
+            } else {
+                confidenceEl.className = 'mb-0 confidence-low';
+            }
+
+            // Severity
+            const severity = diagnosisData.severity || 'medium';
+            const severityBadge = document.getElementById('severityBadge');
+            const severityColors = {
+                'low': 'bg-success',
+                'medium': 'bg-warning',
+                'high': 'bg-danger',
+                'critical': 'bg-dark'
+            };
+            severityBadge.className = `badge ${severityColors[severity]} text-uppercase`;
+            severityBadge.textContent = `${severity} Severity`;
+
+            // Matched symptoms
+            const matchedSymptoms = diagnosisData.matched_symptoms || [];
+            document.getElementById('matchedSymptoms').innerHTML = matchedSymptoms
+                .map(s => `<span class="symptom-item symptom-matched">${s}</span>`)
+                .join('');
+
+            // Alternative diagnoses
+            const alternatives = diagnosisData.alternatives || [];
+            if (alternatives.length > 0) {
+                document.getElementById('alternatives').innerHTML = alternatives
+                    .map(alt => `
+                        <div class="mb-2">
+                            <strong>${alt.disease}</strong> - 
+                            <span class="text-muted">${alt.confidence.toFixed(1)}% confidence</span>
+                        </div>
+                    `).join('');
+            } else {
+                document.getElementById('alternativesCard').classList.add('d-none');
+            }
+
+            // Medications
+            const medications = prescriptionData.medications || [];
+            document.getElementById('medicationsTable').innerHTML = medications
+                .map(med => `
+                    <tr>
+                        <td><strong>${med.name}</strong></td>
+                        <td>${med.dosage}</td>
+                        <td>${med.frequency}</td>
+                        <td>${med.duration || 'As prescribed'}</td>
+                    </tr>
+                `).join('');
+
+            // Instructions
+            const instructions = prescriptionData.instructions || 'Follow your doctor\'s advice.';
+            document.getElementById('instructions').innerHTML = 
+                Array.isArray(instructions) 
+                    ? instructions.map(i => `<li>${i}</li>`).join('') 
+                    : instructions;
+
+            // Precautions
+            const precautions = prescriptionData.precautions || 'Consult your doctor if symptoms worsen.';
+            document.getElementById('precautions').innerHTML = 
+                Array.isArray(precautions) 
+                    ? precautions.map(p => `<li>${p}</li>`).join('') 
+                    : precautions;
+
+            // Recommendations
+            const recommendations = diagnosisData.recommendations || [];
+            if (recommendations.length > 0) {
+                document.getElementById('recommendations').innerHTML = 
+                    recommendations.map(r => `<li>${r}</li>`).join('');
+            } else {
+                document.getElementById('recommendationsCard').classList.add('d-none');
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('errorContainer').classList.remove('d-none');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function newConsultation() {
+            localStorage.removeItem('currentDiagnosis');
+            window.location.href = 'patient.html';
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

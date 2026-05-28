@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Safari Fix</title>
+    <style>
+        body { font-family: system-ui; padding: 40px; max-width: 800px; margin: 0 auto; }
+        .step { background: #f0f0f0; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .important { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; }
+        button { padding: 15px 30px; font-size: 18px; background: #007aff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>�� Safari Connection Test</h1>
+    
+    <div class="important">
+        <strong>⚠️ Safari Security Note:</strong><br>
+        Safari may block localhost connections. Let's test if that's the issue.
+    </div>
+
+    <div class="step">
+        <h3>Step 1: Enable Safari Developer Menu</h3>
+        <ol>
+            <li>Safari → Preferences (Cmd+,)</li>
+            <li>Go to "Advanced" tab</li>
+            <li>Check "Show Develop menu in menu bar"</li>
+            <li>Close preferences</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Disable Cross-Origin Restrictions (Temporary)</h3>
+        <ol>
+            <li>In Safari menu: Develop → Disable Cross-Origin Restrictions</li>
+            <li>Reload this page</li>
+            <li>Try the test below</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h3>Step 3: Test Connection</h3>
+        <button onclick="testConnection()">TEST NOW</button>
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                // Test 1: Backend
+                const response = await fetch('http://localhost:5001/', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = '<div class="success"><h3>✅ SUCCESS!</h3><p>Backend is reachable from Safari!</p><p>Status: ' + response.status + '</p></div>';
+                
+                // Test 2: Login
+                const loginRes = await fetch('http://localhost:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        password: 'test1234'
+                    })
+                });
+                
+                const loginData = await loginRes.json();
+                
+                if (loginData.access_token) {
+                    localStorage.setItem('token', loginData.access_token);
+                    localStorage.setItem('user', JSON.stringify(loginData.user));
+                    
+                    result.innerHTML += '<div class="success"><h3>✅ LOGIN WORKS!</h3><p>Token stored successfully!</p><p><a href="patient.html"><button>Go to Patient Page</button></a></p></div>';
+                }
+                
+            } catch (error) {
+                result.innerHTML = '<div class="error"><h3>❌ CONNECTION FAILED</h3><p><strong>Error:</strong> ' + error.message + '</p>';
+                
+                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                    result.innerHTML += '<div class="important"><p><strong>This is a Safari CORS issue!</strong></p><p>Follow Steps 1 & 2 above to fix it, then try again.</p></div>';
+                }
+                
+                result.innerHTML += '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

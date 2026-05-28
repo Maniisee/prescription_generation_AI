@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Diagnostics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .timer { font-size: 2rem; color: #0066cc; font-weight: bold; }
+        .fast { color: #28a745; }
+        .slow { color: #ffc107; }
+        .very-slow { color: #dc3545; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3>🔍 Login Performance Test</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h5>Step 1: Test Backend Connectivity</h5>
+                            <button onclick="testBackend()" class="btn btn-primary">Test Backend</button>
+                            <div id="backendResult" class="mt-2"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Step 2: Test Login Speed</h5>
+                            <div class="mb-3">
+                                <input type="email" id="email" class="form-control" value="test@example.com" placeholder="Email">
+                            </div>
+                            <div class="mb-3">
+                                <input type="password" id="password" class="form-control" value="test1234" placeholder="Password">
+                            </div>
+                            <button onclick="testLogin()" class="btn btn-success">Test Login</button>
+                            <div id="loginResult" class="mt-2"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Step 3: Go to Application</h5>
+                            <a href="login.html" class="btn btn-primary">Open Login Page</a>
+                            <a href="patient.html" class="btn btn-success ms-2">Open Patient Page</a>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>Performance Guidelines:</strong>
+                            <ul class="mb-0">
+                                <li>🟢 Fast: &lt; 500ms</li>
+                                <li>🟡 Acceptable: 500ms - 2s</li>
+                                <li>🔴 Slow: &gt; 2s (investigate)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5001';
+
+        async function testBackend() {
+            const resultDiv = document.getElementById('backendResult');
+            resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Testing...';
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(`${API_URL}/`);
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                
+                const data = await response.json();
+                
+                let speedClass = duration < 500 ? 'fast' : (duration < 2000 ? 'slow' : 'very-slow');
+                
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        ✅ Backend is responding<br>
+                        <span class="timer ${speedClass}">${duration}ms</span><br>
+                        Status: ${data.status}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ Backend is not responding<br>
+                        Error: ${error.message}<br>
+                        <small>Make sure backend is running on port 5001</small>
+                    </div>
+                `;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Logging in...';
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let speedClass = duration < 500 ? 'fast' : (duration < 2000 ? 'slow' : 'very-slow');
+                    let speedEmoji = duration < 500 ? '🚀' : (duration < 2000 ? '🐢' : '⏱️');
+                    
+                    // Store token
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ Login successful ${speedEmoji}<br>
+                            <span class="timer ${speedClass}">${duration}ms</span><br>
+                            Token stored: Yes<br>
+                            User: ${data.user.name} (${data.user.email})
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            ❌ Login failed<br>
+                            Time: ${duration}ms<br>
+                            Message: ${data.message}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ Login request failed<br>
+                        Time: ${duration}ms<br>
+                        Error: ${error.message}<br>
+                        <small>Network or CORS issue?</small>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('DOMContentLoaded', () => {
+            testBackend();
+        });
+    </script>
+</body>
+</html>

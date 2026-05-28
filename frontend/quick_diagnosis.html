@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <title>Quick Diagnosis Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 40px; background: #f8f9fa; }
+        .test-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 20px 0; }
+        .symptom-tag { display: inline-block; padding: 8px 15px; margin: 5px; background: #007bff; color: white; border-radius: 20px; cursor: pointer; }
+        .symptom-tag.selected { background: #28a745; }
+        button { margin: 10px 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Quick Diagnosis Test</h1>
+        <p>This page helps you quickly create a diagnosis to test the prescription page.</p>
+        
+        <div class="test-box">
+            <h3>Step 1: Patient Information</h3>
+            <div class="mb-3">
+                <label>Patient Name:</label>
+                <input type="text" id="patientName" class="form-control" value="Test Patient">
+            </div>
+            <div class="mb-3">
+                <label>Age:</label>
+                <input type="number" id="age" class="form-control" value="35">
+            </div>
+            <div class="mb-3">
+                <label>Gender:</label>
+                <select id="gender" class="form-control">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="test-box">
+            <h3>Step 2: Select Symptoms (click to select)</h3>
+            <div id="symptomsList"></div>
+        </div>
+
+        <div class="test-box">
+            <h3>Step 3: Vital Signs</h3>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Blood Pressure (Systolic):</label>
+                    <input type="number" id="bpSystolic" class="form-control" value="120">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Blood Pressure (Diastolic):</label>
+                    <input type="number" id="bpDiastolic" class="form-control" value="80">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Temperature (°F):</label>
+                    <input type="number" id="temperature" class="form-control" value="98.6" step="0.1">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Pulse (bpm):</label>
+                    <input type="number" id="pulse" class="form-control" value="72">
+                </div>
+            </div>
+        </div>
+
+        <div class="test-box text-center">
+            <button class="btn btn-primary btn-lg" onclick="runDiagnosis()">🚀 Run Diagnosis</button>
+            <button class="btn btn-secondary" onclick="viewLocalStorage()">📋 View localStorage</button>
+            <button class="btn btn-danger" onclick="clearData()">🗑️ Clear Data</button>
+        </div>
+
+        <div id="result" class="test-box d-none"></div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        const symptoms = [
+            'Fever', 'Cough', 'Headache', 'Fatigue', 'Sore Throat',
+            'Runny Nose', 'Body Aches', 'Shortness of Breath', 'Chest Pain',
+            'Nausea', 'Vomiting', 'Diarrhea', 'Abdominal Pain', 'Dizziness'
+        ];
+
+        // Render symptoms
+        const symptomsList = document.getElementById('symptomsList');
+        symptoms.forEach(symptom => {
+            const tag = document.createElement('span');
+            tag.className = 'symptom-tag';
+            tag.textContent = symptom;
+            tag.onclick = () => tag.classList.toggle('selected');
+            symptomsList.appendChild(tag);
+        });
+
+        async function runDiagnosis() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>⏳ Processing...</p>';
+            resultDiv.classList.remove('d-none');
+
+            try {
+                // Get selected symptoms
+                const selectedSymptoms = Array.from(document.querySelectorAll('.symptom-tag.selected'))
+                    .map(el => el.textContent);
+
+                if (selectedSymptoms.length === 0) {
+                    resultDiv.innerHTML = '<p class="text-danger">❌ Please select at least one symptom!</p>';
+                    return;
+                }
+
+                // Get patient data
+                const patientData = {
+                    name: document.getElementById('patientName').value,
+                    age: parseInt(document.getElementById('age').value),
+                    gender: document.getElementById('gender').value
+                };
+
+                const vitals = {
+                    blood_pressure_systolic: parseInt(document.getElementById('bpSystolic').value),
+                    blood_pressure_diastolic: parseInt(document.getElementById('bpDiastolic').value),
+                    temperature: parseFloat(document.getElementById('temperature').value),
+                    pulse: parseInt(document.getElementById('pulse').value)
+                };
+
+                console.log('Patient:', patientData);
+                console.log('Symptoms:', selectedSymptoms);
+                console.log('Vitals:', vitals);
+
+                // Get token
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    resultDiv.innerHTML = '<p class="text-danger">❌ Not logged in! <a href="login.html">Go to login</a></p>';
+                    return;
+                }
+
+                // Step 1: Create patient
+                console.log('Creating patient...');
+                const patientResponse = await fetch(`${API_URL}/api/patient/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(patientData)
+                });
+
+                const patientResult = await patientResponse.json();
+                console.log('Patient result:', patientResult);
+
+                if (!patientResponse.ok) {
+                    resultDiv.innerHTML = `<p class="text-danger">❌ Failed to create patient: ${patientResult.message}</p>`;
+                    return;
+                }
+
+                const patientId = patientResult.patient_id;
+
+                // Step 2: Create diagnosis
+                console.log('Creating diagnosis for patient:', patientId);
+                const diagnosisResponse = await fetch(`${API_URL}/api/diagnosis/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        patient_id: patientId,
+                        symptoms: selectedSymptoms,
+                        vitals: vitals
+                    })
+                });
+
+                const diagnosisResult = await diagnosisResponse.json();
+                console.log('Diagnosis result:', diagnosisResult);
+
+                if (!diagnosisResponse.ok) {
+                    resultDiv.innerHTML = `<p class="text-danger">❌ Diagnosis failed: ${diagnosisResult.message}</p>`;
+                    return;
+                }
+
+                // Store in localStorage
+                localStorage.setItem('currentDiagnosis', JSON.stringify(diagnosisResult));
+                console.log('Stored in localStorage:', diagnosisResult);
+
+                // Display success
+                resultDiv.innerHTML = `
+                    <h3 class="text-success">✅ Diagnosis Created!</h3>
+                    <div class="alert alert-info">
+                        <strong>Disease:</strong> ${diagnosisResult.prediction.disease}<br>
+                        <strong>Confidence:</strong> ${diagnosisResult.prediction.confidence.toFixed(1)}%<br>
+                        <strong>Diagnosis ID:</strong> ${diagnosisResult.diagnosis_id}
+                    </div>
+                    <button class="btn btn-success btn-lg" onclick="goToPrescription()">
+                        📋 View Prescription
+                    </button>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p class="text-danger">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        function goToPrescription() {
+            window.location.href = 'prescription.html?v=' + Date.now();
+        }
+
+        function viewLocalStorage() {
+            const diagnosis = localStorage.getItem('currentDiagnosis');
+            if (diagnosis) {
+                alert('Current Diagnosis:\n\n' + JSON.stringify(JSON.parse(diagnosis), null, 2));
+            } else {
+                alert('No diagnosis found in localStorage');
+            }
+        }
+
+        function clearData() {
+            localStorage.removeItem('currentDiagnosis');
+            alert('Diagnosis data cleared!');
+        }
+
+        // Check login on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.body.innerHTML = `
+                    <div class="container text-center" style="padding-top: 100px;">
+                        <h1>⚠️ Not Logged In</h1>
+                        <p>Please log in first to use this page.</p>
+                        <a href="login.html" class="btn btn-primary btn-lg">Go to Login</a>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

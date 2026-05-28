@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Disease Test - No Database Required</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .test-card { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-width: 800px; margin: 0 auto; }
+        .result-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .symptom-tag { display: inline-block; padding: 8px 15px; margin: 5px; background: #e9ecef; border-radius: 20px; cursor: pointer; transition: all 0.3s; }
+        .symptom-tag:hover { background: #667eea; color: white; transform: scale(1.05); }
+        .symptom-tag.selected { background: #667eea; color: white; }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1 class="text-center mb-4">🏥 AI Disease Detection Test</h1>
+        <p class="text-center text-muted mb-4">Direct AI Testing - No Database Required</p>
+        
+        <div id="step1">
+            <h4>Select Your Symptoms:</h4>
+            <div id="symptomsList"></div>
+            
+            <h4 class="mt-4">Vital Signs (Optional):</h4>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Temperature (°F)</label>
+                    <input type="number" class="form-control" id="temp" placeholder="98.6">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Pulse (bpm)</label>
+                    <input type="number" class="form-control" id="pulse" placeholder="72">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary btn-lg w-100 mt-3" onclick="runDiagnosis()">
+                🔬 Get AI Diagnosis
+            </button>
+        </div>
+        
+        <div id="results" class="d-none mt-4">
+            <h3 class="text-success">✅ Diagnosis Results</h3>
+            <div id="diagnosisResult"></div>
+            
+            <h4 class="mt-4">💊 Prescription</h4>
+            <div id="prescriptionResult"></div>
+            
+            <button class="btn btn-outline-primary mt-3" onclick="resetTest()">🔄 Test Again</button>
+        </div>
+    </div>
+
+    <script>
+        const symptoms = [
+            'Fever', 'Cough', 'Headache', 'Fatigue', 'Body aches',
+            'Sore throat', 'Runny nose', 'Shortness of breath',
+            'Chest pain', 'Nausea', 'Dizziness', 'Increased thirst',
+            'Frequent urination', 'Blurred vision', 'Wheezing'
+        ];
+        
+        let selectedSymptoms = [];
+        
+        // Render symptoms
+        const container = document.getElementById('symptomsList');
+        container.innerHTML = symptoms.map(s => 
+            `<span class="symptom-tag" onclick="toggleSymptom('${s}')">${s}</span>`
+        ).join('');
+        
+        function toggleSymptom(symptom) {
+            const index = selectedSymptoms.indexOf(symptom);
+            if (index > -1) {
+                selectedSymptoms.splice(index, 1);
+            } else {
+                selectedSymptoms.push(symptom);
+            }
+            updateSymptomDisplay();
+        }
+        
+        function updateSymptomDisplay() {
+            document.querySelectorAll('.symptom-tag').forEach(tag => {
+                const symptom = tag.textContent;
+                tag.classList.toggle('selected', selectedSymptoms.includes(symptom));
+            });
+        }
+        
+        async function runDiagnosis() {
+            if (selectedSymptoms.length === 0) {
+                alert('Please select at least one symptom!');
+                return;
+            }
+            
+            const temp = parseFloat(document.getElementById('temp').value) || 98.6;
+            const pulse = parseInt(document.getElementById('pulse').value) || 72;
+            
+            // Simulate API call (since we don't have database)
+            const diagnosisData = simulateDiagnosis(selectedSymptoms, temp, pulse);
+            
+            // Display results
+            displayResults(diagnosisData);
+        }
+        
+        function simulateDiagnosis(symptoms, temp, pulse) {
+            // Simple rule-based diagnosis for demo
+            const symptomsLower = symptoms.map(s => s.toLowerCase());
+            
+            // Check for Flu
+            if (symptomsLower.includes('fever') && symptomsLower.includes('cough') && 
+                symptomsLower.includes('body aches')) {
+                return {
+                    disease: 'Flu',
+                    confidence: 85,
+                    severity: 'medium',
+                    matched: symptoms,
+                    medications: [
+                        { name: 'Oseltamivir (Tamiflu)', dosage: '75mg', frequency: 'Twice daily' },
+                        { name: 'Paracetamol', dosage: '650mg', frequency: 'Every 6 hours' }
+                    ],
+                    instructions: [
+                        'Complete bed rest recommended',
+                        'Stay well hydrated',
+                        'Take medications with food'
+                    ]
+                };
+            }
+            
+            // Check for Common Cold
+            if (symptomsLower.includes('runny nose') || symptomsLower.includes('sore throat')) {
+                return {
+                    disease: 'Common Cold',
+                    confidence: 75,
+                    severity: 'low',
+                    matched: symptoms,
+                    medications: [
+                        { name: 'Paracetamol', dosage: '500mg', frequency: 'Every 6 hours' },
+                        { name: 'Antihistamine', dosage: '10mg', frequency: 'Once daily' }
+                    ],
+                    instructions: [
+                        'Get plenty of rest',
+                        'Drink warm fluids',
+                        'Use saline nasal drops'
+                    ]
+                };
+            }
+            
+            // Check for Diabetes
+            if (symptomsLower.includes('increased thirst') && symptomsLower.includes('frequent urination')) {
+                return {
+                    disease: 'Diabetes',
+                    confidence: 70,
+                    severity: 'high',
+                    matched: symptoms,
+                    medications: [
+                        { name: 'Metformin', dosage: '500mg', frequency: 'Twice daily with meals' },
+                        { name: 'Glimepiride', dosage: '1mg', frequency: 'Once daily before breakfast' }
+                    ],
+                    instructions: [
+                        'Monitor blood sugar levels daily',
+                        'Follow diabetic diet plan',
+                        'Regular exercise (30 min daily)'
+                    ]
+                };
+            }
+            
+            // Check for Asthma
+            if (symptomsLower.includes('shortness of breath') || symptomsLower.includes('wheezing')) {
+                return {
+                    disease: 'Asthma',
+                    confidence: 80,
+                    severity: 'medium',
+                    matched: symptoms,
+                    medications: [
+                        { name: 'Salbutamol Inhaler', dosage: '100mcg', frequency: 'As needed' },
+                        { name: 'Budesonide Inhaler', dosage: '200mcg', frequency: 'Twice daily' }
+                    ],
+                    instructions: [
+                        'Always carry rescue inhaler',
+                        'Avoid triggers (dust, smoke, pollen)',
+                        'Practice breathing exercises'
+                    ]
+                };
+            }
+            
+            // Default
+            return {
+                disease: 'General Illness',
+                confidence: 60,
+                severity: 'low',
+                matched: symptoms,
+                medications: [
+                    { name: 'Pain reliever', dosage: 'As directed', frequency: 'As needed' }
+                ],
+                instructions: [
+                    'Rest and stay hydrated',
+                    'Monitor symptoms',
+                    'Consult doctor if symptoms persist'
+                ]
+            };
+        }
+        
+        function displayResults(data) {
+            document.getElementById('step1').classList.add('d-none');
+            document.getElementById('results').classList.remove('d-none');
+            
+            const severityColor = {
+                'low': 'success',
+                'medium': 'warning',
+                'high': 'danger'
+            };
+            
+            document.getElementById('diagnosisResult').innerHTML = `
+                <div class="result-box">
+                    <h4>${data.disease}</h4>
+                    <p><strong>Confidence:</strong> 
+                        <span class="badge bg-${data.confidence >= 75 ? 'success' : data.confidence >= 60 ? 'warning' : 'danger'}">
+                            ${data.confidence}%
+                        </span>
+                    </p>
+                    <p><strong>Severity:</strong> 
+                        <span class="badge bg-${severityColor[data.severity]}">${data.severity.toUpperCase()}</span>
+                    </p>
+                    <p><strong>Matched Symptoms:</strong> ${data.matched.join(', ')}</p>
+                </div>
+            `;
+            
+            document.getElementById('prescriptionResult').innerHTML = `
+                <div class="result-box">
+                    <h5>Medications:</h5>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Medication</th>
+                                <th>Dosage</th>
+                                <th>Frequency</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.medications.map(m => `
+                                <tr>
+                                    <td>${m.name}</td>
+                                    <td>${m.dosage}</td>
+                                    <td>${m.frequency}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <h5 class="mt-3">Instructions:</h5>
+                    <ul>
+                        ${data.instructions.map(i => `<li>${i}</li>`).join('')}
+                    </ul>
+                    
+                    <div class="alert alert-danger mt-3">
+                        <strong>⚕️ Medical Disclaimer:</strong> This is an AI-generated preliminary assessment. 
+                        Please consult a qualified healthcare provider for proper diagnosis and treatment.
+                    </div>
+                </div>
+            `;
+        }
+        
+        function resetTest() {
+            selectedSymptoms = [];
+            updateSymptomDisplay();
+            document.getElementById('temp').value = '';
+            document.getElementById('pulse').value = '';
+            document.getElementById('step1').classList.remove('d-none');
+            document.getElementById('results').classList.add('d-none');
+        }
+    </script>
+</body>
+</html>
